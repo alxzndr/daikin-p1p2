@@ -134,7 +134,11 @@ they happen.
 
 ## Before capturing
 
-* The Mac must reach the broker (`10.0.1.5:1883`) - on the LAN, not over the guest VLAN.
+* The Mac must reach the broker the bridge publishes to (`10.0.1.10:1883`) - on the LAN, not over
+  the guest VLAN.
+* **Raw packets are not published by default.** If a capture has no `P1P2/R` line, raw output is
+  off on the bridge; `docs/ai/TESTING.md` section 1 explains the setting and the command the human
+  sends to switch it on. Without `P1P2/R` lines the replay harness has nothing to decode.
 * Check the bridge is publishing: `P1P2/L/P1P2MQTT/bridge0` = `online`, or look at HA.
 * `brew install mosquitto` if `mosquitto_sub` is missing.
 * A capture of a live house is anonymous bus data, but it does contain your setpoints,
@@ -167,7 +171,7 @@ line by line before committing it.
 
 | Symptom | Cause / fix |
 |---|---|
-| `mosquitto_sub: Connection refused` / timeout | Wrong host, or you are not on the network that reaches 10.0.1.5 |
+| `mosquitto_sub: Connection refused` / timeout | Wrong host, or you are not on the network that reaches the broker |
 | `Error: Bad file descriptor` | That is what the Homebrew build of mosquitto_sub prints when it cannot connect at all - wrong port, broker down, or firewall |
 | `Module function not supported` / `Bad user name or password` | Broker credentials in `tools/capture.env` are wrong or empty |
 | 0 lines captured | Bridge offline (`P1P2/L/...` not `online`), or MQTT integration restarted; check HA |
