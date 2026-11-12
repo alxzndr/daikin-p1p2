@@ -11,11 +11,31 @@ cp tools/capture.env.example tools/capture.env    # then edit host/user/password
 tools/capture.sh -d 900 defrost                   # 15 minutes, stops by itself
 tools/scrub_capture.sh captures/2026-11-14_203112_defrost.log
 git add captures/2026-11-14_203112_defrost_scrubbed.log
+
+tools/capture.sh -D -d 30 contract                # also the HA discovery payloads (task 03)
 ```
 
 `tools/capture.sh` only subscribes (`mosquitto_sub -t 'P1P2/R/#' -t 'P1P2/P/#'
 -t 'P1P2/S/#'`). It has no publish in it and never touches `P1P2/W*`. Stop a running
 capture with Ctrl-C.
+
+### The `-D` option (Home Assistant discovery payloads)
+
+`-D` adds one subscription per entity component the bridge uses, fixed to this bridge:
+`<prefix>/<component>/<node_id>/+/config` with `prefix=homeassistant`, `node_id=bridge0`
+and `component` in `sensor`, `binary_sensor`, `number`, `switch`, `button`, `select`,
+`text`, `climate` - the eight entries of `haPrefixString[]` in
+`examples/P1P2MQTT-bridge/P1P2_HomeAssistant.h`, assembled by `HACONFIGTOPIC()` in
+`P1P2MQTT-bridge.ino` as `<prefix>/<component>/<EE.bridgeName>/<object_id>/config`.
+Other devices in the house (ESPAltherma, Shelly, …) publish under a different node id,
+so they cannot end up in the capture. If you ever rename the bridge or change the
+discovery prefix, set `P1P2_MQTT_HA_NODE_ID` / `P1P2_MQTT_HA_DISCOVERY_PREFIX` (in
+`tools/capture.env`) - `tools/scrub_capture.sh` reads the same two names.
+
+Discovery payloads are **retained**, so they all arrive the moment the capture
+subscribes: `-d 30` is enough, no bridge restart and no `MQTT_Rebuild` needed. Take one
+with `-D` before and after a firmware upgrade - that is what task 03 compares (entity
+names, `uniq_id`s, device classes, units, `sw`).
 
 ## File names
 
@@ -38,6 +58,7 @@ by accident; `git add captures/<file>.log` prints "ignored" and does nothing.
 2026-11-14T20:31:10 1 P1P2/P/P1P2MQTT/bridge0/T/R2T/Leaving_Water_Temperature 31.2
 2026-11-14T20:31:12 0 P1P2/R/P1P2MQTT/bridge0 000012010000f03d...
 2026-11-14T20:31:12 0 P1P2/P/P1P2MQTT/bridge0/T/R2T/Leaving_Water_Temperature 31.4
+2026-11-14T20:31:09 1 homeassistant/sensor/bridge0/<object_id>/config {"name":"...","uniq_id":"...","dev":{...}}
 ```
 
 * One message per line, four fields: local timestamp `YYYY-MM-DDTHH:MM:SS`, retained flag, topic,
@@ -52,6 +73,9 @@ by accident; `git add captures/<file>.log` prints "ignored" and does nothing.
   compares its own decode against these lines.
 * `P1P2/S/...` is verbose bridge status. It is captured (useful while debugging) but
   **scrubbing removes it**, because config values can show up there.
+* `homeassistant/<component>/bridge0/<object_id>/config` (only with `-D`) is the Home
+  Assistant discovery payload of one entity, always with retained flag `1`. Its payload
+  is one line of JSON, so the whole entity definition is on that single line.
 
 ## Scrubbing
 
@@ -60,9 +84,12 @@ tools/scrub_capture.sh captures/<file>.log          # writes <file>_scrubbed.log
 tools/scrub_capture.sh -o /tmp/out captures/*.log   # or somewhere else
 ```
 
-The scrubbed copy keeps only `#` header lines, `P1P2/R` and `P1P2/P` lines, and drops:
+The scrubbed copy keeps `#` header lines, `P1P2/R` lines, `P1P2/P` lines, and the
+discovery `config` lines of **this** bridge (`.../bridge0/<object_id>/config`), and drops:
 
 * every `P1P2/S` line;
+* discovery payloads of other devices (`homeassistant/<component>/<other-node>/...`) and
+  discovery-shaped topics that do not match `<prefix>/<component>/<node>/<object>/config`;
 * every line on any other topic;
 * every line containing a credential-like word (`password`, `passwd`, `pwd`, `psk`,
   `secret`, `token`, `api_key`, `credential`, `private_key`, `bearer`, `auth`, `ssid`,
@@ -73,6 +100,11 @@ Every drop is printed with file, line number and reason, so you can see that not
 important went away. The script exits non-zero if a `P1P2/S` line survives. Reading
 the scrubbed file yourself before committing stays your job - a script cannot judge
 what is personal.
+
+**Discovery lines are extra work for you.** They survive on purpose (task 03 needs them),
+but they carry device identifiers: `uniq_id`, `dev.ids`/`dev.name`, entity names, the
+availability topics and the firmware version. The script says so when it kept any -
+read those lines before you commit the file.
 
 Note: patterns are chosen so that no real parameter key matches. `ota` is *not* in the
 list because it would drop every `*_Total` counter; the OTA password only ever appears
@@ -94,6 +126,7 @@ not just the middle), and note in the PR what HA was commanding at the time.
 | `night_idle` | Night, heating idle, no writes: baseline traffic and idle LWT behaviour | 3600 |
 | `boost_lwt38` | Low-PV day: LWT setpoint from 30 °C to 38 °C and back, watch acceptance | 1200 |
 | `compressor_throttle` | Any period where `compressor_rpm` is clearly capped | 1200 |
+| `contract` (`-D`) | Not a bus situation: the HA entity contract of the firmware that is running now, before/after a firmware change (task 03) | 30 |
 
 Winter situations (`defrost`, `buh_active`, `night_idle`) cannot be captured in
 summer - capture what the unit actually does now and add the cold-weather ones when
@@ -107,6 +140,8 @@ they happen.
 * A capture of a live house is anonymous bus data, but it does contain your setpoints,
   temperatures and switch-on moments: commit only the scrubbed file, and only when you
   are fine with that being on public GitHub.
+* With `-D` it is no longer only bus data: discovery payloads name your entities and the
+  device identifiers of the bridge. Same rule - scrubbed only, and read before pushing.
 
 ## Replaying a capture
 

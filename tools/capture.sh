@@ -28,11 +28,30 @@ TOPICS=(
   'P1P2/S/#'
 )
 
+# With -D, the Home Assistant discovery topics of this bridge are added. The bridge
+# publishes them as <prefix>/<component>/<node_id>/<object_id>/config - see
+# HACONFIGTOPIC() in P1P2MQTT-bridge.ino and haPrefixString[]/hadevice in
+# P1P2_HomeAssistant.h, and P1P2_NetworkParams.h for BRIDGE_NAME "bridge0". One
+# subscription per component, with the node id fixed and exactly one level for the
+# object id, so discovery payloads of other devices in the house cannot enter a
+# capture. The component list is the eight entries of haPrefixString ("undef" and
+# the duplicated "sensor" for HA_ENUM left out).
+HA_COMPONENTS=(
+  sensor
+  binary_sensor
+  number
+  switch
+  button
+  select
+  text
+  climate
+)
+
 usage() {
   cat <<EOF
 $PROGRAM - subscribe-only capture of the P1/P2 bridge traffic
 
-usage: $PROGRAM [-d SECONDS] [-o DIR] [-e FILE] [-h] LABEL
+usage: $PROGRAM [-d SECONDS] [-o DIR] [-e FILE] [-D] [-h] LABEL
 
   LABEL      short name for the situation, becomes part of the file name
              (defrost, dhw_run, quiet_on, night_idle, boost_lwt38, startup, ...)
@@ -40,6 +59,11 @@ usage: $PROGRAM [-d SECONDS] [-o DIR] [-e FILE] [-h] LABEL
   -o DIR     output directory (default: <repo>/captures)
   -e FILE    environment file with the broker settings
              (default: tools/capture.env, git-ignored)
+  -D         also capture this bridge's Home Assistant discovery payloads, needed to
+             compare the entity contract between two firmware versions (task 03).
+             Those messages are retained, so they arrive the moment you subscribe -
+             a short -d capture is enough, no bridge restart. Read them before you
+             commit: the payloads carry device identifiers and entity names.
   -h         this help
 
 Broker settings are read from the environment first, then from the env file:
@@ -49,6 +73,10 @@ Broker settings are read from the environment first, then from the env file:
   P1P2_MQTT_PASS   optional; mosquitto_sub gets it on its command line, so it is in
                    'ps' while the capture runs - use a read-only broker account
   P1P2_MQTT_CLIENT_ID optional, default p1p2-capture-<pid>
+  P1P2_MQTT_HA_DISCOVERY_PREFIX optional, default homeassistant - must match the
+                   discovery prefix configured on the bridge (the 'HA' setting)
+  P1P2_MQTT_HA_NODE_ID optional, default bridge0 - the node id (= bridge name) that
+                   HA shows in <prefix>/<component>/<node_id>/<object_id>/config
 
 output: <DIR>/YYYY-MM-DD_HHMMSS_LABEL.log, one line per message:
   <ISO timestamp> <retained 0|1> <topic> <payload>
@@ -65,12 +93,14 @@ die() {
 duration=""
 out_dir="$REPO_ROOT/captures"
 label=""
+with_discovery=0
 
-while getopts ":d:o:e:h" opt; do
+while getopts ":d:o:e:Dh" opt; do
   case "$opt" in
     d) duration=$OPTARG ;;
     o) out_dir=$OPTARG ;;
     e) ENV_FILE=$OPTARG ;;
+    D) with_discovery=1 ;;
     h) usage; exit 0 ;;
     \?) usage >&2; die "unknown option -$OPTARG" ;;
     :) usage >&2; die "option -$OPTARG needs a value" ;;
@@ -116,6 +146,17 @@ port=${P1P2_MQTT_PORT:-1883}
 user=${P1P2_MQTT_USER:-}
 pass=${P1P2_MQTT_PASS:-}
 client_id=${P1P2_MQTT_CLIENT_ID:-p1p2-capture-$$}
+ha_prefix=${P1P2_MQTT_HA_DISCOVERY_PREFIX:-homeassistant}
+ha_node=${P1P2_MQTT_HA_NODE_ID:-bridge0}
+
+# Both end up in an MQTT topic filter, and tools/scrub_capture.sh has to recognise
+# them again - keep them to plain MQTT name characters.
+case "$ha_prefix" in
+  *[!A-Za-z0-9_-]*) die "P1P2_MQTT_HA_DISCOVERY_PREFIX: only letters, digits, dash and underscore (got: $ha_prefix)" ;;
+esac
+case "$ha_node" in
+  *[!A-Za-z0-9_-]*) die "P1P2_MQTT_HA_NODE_ID: only letters, digits, dash and underscore (got: $ha_node)" ;;
+esac
 
 [ -n "$host" ] || die "no broker host: set P1P2_MQTT_HOST or put it in $ENV_FILE (see tools/capture.env.example)"
 command -v mosquitto_sub >/dev/null 2>&1 || die "mosquitto_sub not found (brew install mosquitto)"
@@ -137,7 +178,13 @@ fi
 if [ -n "$pass" ]; then
   args+=(-P "$pass")
 fi
-for topic in "${TOPICS[@]}"; do
+sub_topics=("${TOPICS[@]}")
+if [ "$with_discovery" -eq 1 ]; then
+  for component in "${HA_COMPONENTS[@]}"; do
+    sub_topics+=("$ha_prefix/$component/$ha_node/+/config")
+  done
+fi
+for topic in "${sub_topics[@]}"; do
   args+=(-t "$topic")
 done
 
@@ -145,11 +192,17 @@ done
 {
   echo "# captured with tools/capture.sh on $(date -u +%Y-%m-%dT%H:%M:%S)Z"
   echo "# broker: $host:$port (no credentials are ever written to this file)"
+  if [ "$with_discovery" -eq 1 ]; then
+    echo "# discovery payloads of node '$ha_node' are included - read them before committing"
+  fi
   echo "# topics: ${TOPICS[*]}"
+  if [ "$with_discovery" -eq 1 ]; then
+    echo "#         $ha_prefix/<component>/$ha_node/+/config for: ${HA_COMPONENTS[*]}"
+  fi
   echo "# label: $label"
 } >"$out_file"
 
-echo "subscribing to ${TOPICS[*]} on $host:$port -> $out_file"
+echo "subscribing to ${sub_topics[*]} on $host:$port -> $out_file"
 echo "stop with Ctrl-C${duration:+, or wait ${duration}s}"
 
 # mosquitto_sub 2.x cannot print a timestamp itself (%Y is not a valid -F specifier),
