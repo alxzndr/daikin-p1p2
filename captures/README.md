@@ -35,12 +35,16 @@ by accident; `git add captures/<file>.log` prints "ignored" and does nothing.
 # broker: <redacted>
 # topics: P1P2/R/# P1P2/P/# P1P2/S/#
 # label: defrost
-2026-11-14T20:31:12 P1P2/R/P1P2MQTT/bridge0 000012010000f03d...
-2026-11-14T20:31:12 P1P2/P/P1P2MQTT/bridge0/T/R2T/Leaving_Water_Temperature 31.4
+2026-11-14T20:31:10 1 P1P2/P/P1P2MQTT/bridge0/T/R2T/Leaving_Water_Temperature 31.2
+2026-11-14T20:31:12 0 P1P2/R/P1P2MQTT/bridge0 000012010000f03d...
+2026-11-14T20:31:12 0 P1P2/P/P1P2MQTT/bridge0/T/R2T/Leaving_Water_Temperature 31.4
 ```
 
-* One message per line, three fields: local timestamp `YYYY-MM-DDTHH:MM:SS`, topic, payload.
-  The payload is everything after the second space and may itself contain spaces.
+* One message per line, four fields: local timestamp `YYYY-MM-DDTHH:MM:SS`, retained flag, topic,
+  payload. The payload is everything after the third space and may itself contain spaces.
+* The retained flag is `1` for a value the broker had stored and replays when the capture
+  subscribes (the state from before the capture, all stamped with the start time), `0` for a
+  message published while the capture ran. Treat `1` lines as initial state, not as events.
 * Lines starting with `#` are comments from the tool - skip them when parsing.
 * `P1P2/R/P1P2MQTT/bridge0` carries the raw hex packets (plus the bridge's own
   pseudo-packets). That is the input for the replay harness.

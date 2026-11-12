@@ -93,8 +93,8 @@ for in_file in "$@"; do
     continue
   fi
 
-  kept_file=$(mktemp -t scrub_capture)
-  report_file=$(mktemp -t scrub_report)
+  kept_file=$(mktemp "${TMPDIR:-/tmp}/scrub_capture.XXXXXX")
+  report_file=$(mktemp "${TMPDIR:-/tmp}/scrub_report.XXXXXX")
   trap 'rm -f "$kept_file" "$report_file"' EXIT
 
   awk \
@@ -110,7 +110,7 @@ for in_file in "$@"; do
       next
     }
     {
-      topic = $2
+      topic = $3
       if (topic ~ /^P1P2\/S(\/|$)/) {
         drop_status++
         printf "%s:%d  drop P1P2/S line (topic %s)\n", name, NR, topic >> report
@@ -154,7 +154,7 @@ for in_file in "$@"; do
   # Self-check: no line on P1P2/S may survive (header comments are not topics).
   if awk 'BEGIN { found = 0 }
           END { exit found }
-          $0 !~ /^#/ && $2 ~ /^P1P2\/S(\/|$)/ { found = 1; exit }' "$dest"; then
+          $0 !~ /^#/ && $3 ~ /^P1P2\/S(\/|$)/ { found = 1; exit }' "$dest"; then
     :
   else
     echo "$PROGRAM: $dest still has a P1P2/S topic - not calling it clean" >&2

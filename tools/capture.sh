@@ -51,7 +51,7 @@ Broker settings are read from the environment first, then from the env file:
   P1P2_MQTT_CLIENT_ID optional, default p1p2-capture-<pid>
 
 output: <DIR>/YYYY-MM-DD_HHMMSS_LABEL.log, one line per message:
-  <ISO timestamp> <topic> <payload>
+  <ISO timestamp> <retained 0|1> <topic> <payload>
 
 Nothing in this script can write to the bus or the bridge.
 EOF
@@ -127,7 +127,7 @@ args=(
   -h "$host"
   -p "$port"
   -I "$client_id"
-  -F '%t %p'
+  -F '%r %t %p'
 )
 # -i/-I only, no -c: a transient subscriber must not become a persistent session
 # on the broker that HA also uses.
@@ -156,7 +156,7 @@ echo "stop with Ctrl-C${duration:+, or wait ${duration}s}"
 # so its output goes through a FIFO into a loop that prefixes local time. A FIFO
 # (instead of a pipe) keeps the pid of mosquitto_sub, so the timer and Ctrl-C can
 # stop it even while the bus is silent.
-work_dir=$(mktemp -d -t p1p2-capture)
+work_dir=$(mktemp -d "${TMPDIR:-/tmp}/p1p2-capture.XXXXXX")
 fifo="$work_dir/pipe"
 err_file="$work_dir/stderr"
 mkfifo "$fifo"
