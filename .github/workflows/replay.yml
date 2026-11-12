@@ -56,9 +56,9 @@ jobs:
           #   make -C test/host FIRMWARE_DIR=/tmp/rc23/examples/P1P2MQTT-bridge \
           #        BUILD_DIR=/tmp/rc23-host
           #   test/run_replay.sh <capture> --replay-bin /tmp/rc23-host/replay --update-golden
+          rm -rf "$RUNNER_TEMP/fw-copy"
           mkdir -p "$RUNNER_TEMP/fw-copy"
-          cp examples/P1P2MQTT-bridge/*.h "$RUNNER_TEMP/fw-copy/"
-          cp examples/P1P2MQTT-bridge/*.ino "$RUNNER_TEMP/fw-copy/"
+          cp -R examples/P1P2MQTT-bridge/. "$RUNNER_TEMP/fw-copy/"   # incl. its subfolders
           make -C test/host SERIES=$SERIES FIRMWARE_DIR="$RUNNER_TEMP/fw-copy" BUILD_DIR="$GITHUB_WORKSPACE/test/host/build/second"
           test/run_replay.sh test/fixtures/daikin_e_doc_packets.log \
             --replay-bin test/host/build/second/replay
