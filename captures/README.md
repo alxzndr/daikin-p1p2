@@ -58,7 +58,7 @@ by accident; `git add captures/<file>.log` prints "ignored" and does nothing.
 2026-11-14T20:31:10 1 P1P2/P/P1P2MQTT/bridge0/T/R2T/Leaving_Water_Temperature 31.2
 2026-11-14T20:31:12 0 P1P2/R/P1P2MQTT/bridge0 000012010000f03d...
 2026-11-14T20:31:12 0 P1P2/P/P1P2MQTT/bridge0/T/R2T/Leaving_Water_Temperature 31.4
-2026-11-14T20:31:09 1 homeassistant/sensor/bridge0_T_R2T_Leaving_Water_Temperature/config {"name":"...","uniq_id":"...","dev":{...}}
+2026-11-14T20:31:09 1 homeassistant/sensor/bridge0/<object_id>/config {"name":"...","uniq_id":"...","dev":{...}}
 ```
 
 * One message per line, four fields: local timestamp `YYYY-MM-DDTHH:MM:SS`, retained flag, topic,
