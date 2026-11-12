@@ -52,10 +52,7 @@ jobs:
           path: |
             ~/.platformio/.cache
             ~/.platformio/packages
-          key: ${{ runner.os }}-pio-esp8266-${{ matrix.env }}-${{ hashFiles(
-            'examples/P1P2MQTT-bridge/platformio.ini',
-            'OSS-dependencies/**',
-            '.github/workflows/build.yml') }}
+          key: ${{ runner.os }}-pio-esp8266-${{ matrix.env }}-${{ hashFiles('examples/P1P2MQTT-bridge/platformio.ini', 'OSS-dependencies/**', '.github/workflows/build.yml') }}
           restore-keys: |
             ${{ runner.os }}-pio-esp8266-${{ matrix.env }}-
 
@@ -106,11 +103,7 @@ jobs:
           path: |
             ~/.platformio/.cache
             ~/.platformio/packages
-          key: ${{ runner.os }}-pio-atmelavr-${{ hashFiles(
-            'examples/P1P2Monitor/platformio.ini',
-            'P1P2MQTT.cpp',
-            'P1P2MQTT.h',
-            '.github/workflows/build.yml') }}
+          key: ${{ runner.os }}-pio-atmelavr-${{ hashFiles('examples/P1P2Monitor/platformio.ini', 'P1P2MQTT.cpp', 'P1P2MQTT.h', '.github/workflows/build.yml') }}
           restore-keys: |
             ${{ runner.os }}-pio-atmelavr-
 
