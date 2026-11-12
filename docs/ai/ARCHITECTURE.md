@@ -41,7 +41,7 @@ Most decoding and all HA logic is on the ESP. The ATmega is the risky part (timi
 | Topic | Content |
 |---|---|
 | `P1P2/P/P1P2MQTT/bridge0/<X>/<SRC>/<KEY>` | One parameter per topic. `X` = category letter (T temperature, C counter, A bridge…) |
-| `P1P2/R/P1P2MQTT/bridge0` | Raw hex packets (+ pseudo-packets) — **the input for offline tests** |
+| `P1P2/R/P1P2MQTT/bridge0` | Raw hex packets (+ pseudo-packets) — **the input for offline tests**. Only published when output mode bits `0x0001` (bus packets) and `0x0004` (pseudo-packets) are set; the house bridge runs `0x0002`, so this topic is silent today (`TESTING.md` §1) |
 | `P1P2/S/P1P2MQTT/bridge0` | Status, errors, verbose info |
 | `P1P2/W[/...]` | Commands to the bridge (dangerous — see SAFETY.md) |
 | `P1P2/L/P1P2MQTT/bridge0` | Availability (`online`/`offline`) |

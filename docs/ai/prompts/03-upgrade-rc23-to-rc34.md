@@ -7,6 +7,10 @@
 Start with `docs/ai/prompts/00-common.md`. Then read `docs/ai/SAFETY.md`, `docs/ai/HOUSE_CONTEXT.md`,
 `docs/ai/DAIKIN_UNIT.md`, `docs/ai/BUILD_AND_FLASH.md`, `doc/ReleaseNotes.md`.
 
+**Precondition, check it first:** the captures must contain `P1P2/R` lines. Raw output is off on the house
+bridge by default (`docs/ai/TESTING.md` §1). If `grep -c ' P1P2/R/' captures/*.log` gives 0 everywhere, stop
+and report: only the discovery comparison (captures taken with `-D`) can be done without them.
+
 ## Goal
 
 The house runs ESP firmware **0.9.58rc23** (source: commit `07e7230`). Our `main` is at upstream rc34+.

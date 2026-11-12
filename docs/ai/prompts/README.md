@@ -13,7 +13,7 @@ PR format).
 |---|---|---|---|---|---|
 | 01 | `01-ci-and-capture.md` | `test/ci-and-capture` | — | no | — |
 | 02 | `02-replay-harness.md` | `test/replay-harness` | 01 | no (stubs only) | 01 follow-up |
-| — | **Human:** record captures with `tools/capture.sh` | — | 01 | — | — |
+| — | **Human:** switch raw output on (`docs/ai/TESTING.md` §1), then record captures with `tools/capture.sh` | — | 01 | — | — |
 | 03 | `03-upgrade-rc23-to-rc34.md` | `feat/upstream-rc34` | 02 + captures | version suffix only | 05 |
 | 04a | `04a-mismatch-detection.md` | `feat/mismatch-detection` | 02 (03 preferred) | yes, read path | 04b, 04d, 05 |
 | 04b | `04b-write-audit-log.md` | `feat/write-audit-log` | 02 (03 preferred) | yes, observe only | 04a, 04d, 05 |

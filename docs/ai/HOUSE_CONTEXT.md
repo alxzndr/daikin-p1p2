@@ -12,7 +12,13 @@ Full unit details (models, capacities, counters, settings, field settings): `DAI
 - 9 kW backup heater present (BUH). DHW tank (~50 °C).
 - P1P2MQTT bridge (Home-CliCK v1.2): **192.168.2.110**, IoT VLAN, DHCP (no reservation yet). Telnet :23 **without lock**, web OTA :80
   **unauthenticated**. Firmware **0.9.58rc23** (compiled 2025-06-07, Daikin E-Series).
-- MQTT broker: Mosquitto add-on on the Home Assistant host 10.0.1.5:1883.
+- MQTT: the bridge publishes to a **Mosquitto container on the Unraid server, 10.0.1.10:1883** (client id
+  `P1P2MQTT_bridge0`). That broker allows anonymous clients and bridges all topics (`topic # both`) to the
+  Mosquitto app on the Home Assistant host (10.0.1.5:1883), where HA consumes them. Moving the bridge to the
+  HA broker directly is a pending house task.
+- Output mode (`J`): parameters only, no raw packets — a capture on 2026-11-12 held no `P1P2/R` line.
+  The exact value has not been read out yet (`J` command, see `TESTING.md` §1); the firmware default is
+  `0x0002`. Capturing works against the first broker (10.0.1.10) without a login.
 
 ## How Home Assistant uses the bridge (do not break these)
 
