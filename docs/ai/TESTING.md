@@ -53,7 +53,8 @@ Three kinds of evidence, all machine checked:
    same window. Expect differences by construction - the replay starts from an empty state and from
    compiled EEPROM defaults, so it publishes each key once on first sight, and pseudo/uptime keys never
    line up. The number to look at is `final value differs`: that should be 0 for the keys both sides
-   have.
+   have. `test/fixtures/daikin_e_doc_packets_with_published.log` is this mode as a test: the same
+   packets plus the `P1P2/P` lines that the protocol tables say belong to them.
 
 Comparing two firmware revisions over the same packets (this is how rc23 and `main` get compared in
 roadmap task 03):
