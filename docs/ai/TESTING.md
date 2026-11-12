@@ -5,17 +5,21 @@ because every later change depends on it.
 
 ## 1. Capture real traffic (read-only, safe)
 
-The bridge publishes every raw packet on `P1P2/R/P1P2MQTT/bridge0`. Capture with a subscriber on the
-broker (HA host 10.0.1.5, port 1883; credentials from the human — never commit them):
+The bridge publishes every raw packet on `P1P2/R/P1P2MQTT/bridge0`. Use the wrapper, it subscribes to
+`P1P2/R/#`, `P1P2/P/#` and `P1P2/S/#`, timestamps every line and writes `captures/<date>_<time>_<label>.log`:
 
 ```bash
-mosquitto_sub -h 10.0.1.5 -u <user> -P <pass> -v \
-  -t 'P1P2/R/#' -t 'P1P2/P/#' -t 'P1P2/S/#' | ts '%Y-%m-%dT%H:%M:%S' > captures/$(date +%F_%H%M).log
+cp tools/capture.env.example tools/capture.env   # broker host/user/password (git-ignored, never commit)
+tools/capture.sh -d 900 defrost                 # 15 minutes; without -d it runs until Ctrl-C
+tools/scrub_capture.sh captures/<file>.log      # -> <file>_scrubbed.log, safe to commit
 ```
 
-Capture interesting situations deliberately and name them: `defrost`, `dhw_run`, `quiet_on`,
-`quiet_auto_stuck`, `buh_active`, `startup`, `night_idle`, `boost_lwt38`. Keep them in `captures/`
-(raw bus data contains no secrets; check before committing anything with `P1P2/S` lines).
+`tools/capture.sh` contains no publish and never touches `P1P2/W*` - reading the broker is safe, writing
+is not (see `SAFETY.md`). Only the `*_scrubbed.log` files may be committed: `captures/.gitignore` blocks
+the raw ones, and the scrubber drops every `P1P2/S` line plus anything credential-like and prints what it
+removed. `captures/README.md` explains the line format, the naming scheme and the situations worth
+capturing (`defrost`, `dhw_run`, `quiet_on`, `quiet_auto_stuck`, `buh_active`, `startup`, `night_idle`,
+`boost_lwt38`).
 
 ## 2. Offline decode harness (to build)
 
@@ -33,6 +37,9 @@ Until that exists: any decoder change must include a hand-checked example (packe
 in the PR description.
 
 ## 3. Build tests
+
+`.github/workflows/build.yml` builds all of the below on every PR and on `main`, prints flash/RAM in the
+job summary and uploads the `Daikin-E-USB` `firmware.bin` with its SHA-256 as a build artifact.
 
 - `pio run -e Daikin-E-USB` must pass; also `Daikin-F-USB` if you touched shared code (don't break other
   series users of the public fork).
