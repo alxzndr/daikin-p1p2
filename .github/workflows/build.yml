@@ -65,9 +65,10 @@ jobs:
       - name: Report firmware version and flash/RAM usage
         if: ${{ !cancelled() }}
         shell: bash
-        run: bash "$GITHUB_WORKSPACE/.github/scripts/firmware_summary.sh" "${{ matrix.env }}" \
-          "$RUNNER_TEMP/build-${{ matrix.env }}.log" \
-          ".pio/build/${{ matrix.env }}/firmware.bin"
+        run: |
+          bash "$GITHUB_WORKSPACE/.github/scripts/firmware_summary.sh" "${{ matrix.env }}" \
+            "$RUNNER_TEMP/build-${{ matrix.env }}.log" \
+            ".pio/build/${{ matrix.env }}/firmware.bin"
 
       - name: Upload E-series binary + SHA-256
         if: matrix.env == 'Daikin-E-USB'
@@ -116,9 +117,10 @@ jobs:
       - name: Report firmware version and flash/RAM usage
         if: ${{ !cancelled() }}
         shell: bash
-        run: bash "$GITHUB_WORKSPACE/.github/scripts/firmware_summary.sh" "Daikin-E" \
-          "$RUNNER_TEMP/build-Daikin-E.log" \
-          ".pio/build/Daikin-E/firmware.hex"
+        run: |
+          bash "$GITHUB_WORKSPACE/.github/scripts/firmware_summary.sh" "Daikin-E" \
+            "$RUNNER_TEMP/build-Daikin-E.log" \
+            ".pio/build/Daikin-E/firmware.hex"
 
   shellcheck:
     name: shellcheck tools/

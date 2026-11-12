@@ -4,6 +4,10 @@
 #
 # Usage: firmware_summary.sh <pio-env> <build-log> <binary-path>
 #
+# Exits non-zero when the build log is missing, or when the build reported success
+# but the binary is not there: a summary that quietly says "(no binary)" would hide
+# a broken pipeline.
+#
 # Part of the P1P2MQTT fork (https://github.com/alxzndr/daikin-p1p2).
 # License: CC BY-NC-ND 4.0 with the exceptions in LICENSE.md.
 #
@@ -80,3 +84,19 @@ fi
 echo "== $env_name: $version"
 printf '%s\n' "$size_lines"
 echo "== $env_name sha256: $sha256"
+
+# A green build without a build log or without a binary means this step was called
+# with mangled arguments or PlatformIO changed its output layout - that must not
+# pass as a reportable success (the first CI run of this script really did get
+# leading spaces in its arguments from a folded YAML scalar and silently reported
+# "(no binary)").
+problems=0
+if [ ! -f "$log_file" ]; then
+  echo "::error::build log not found: $log_file"
+  problems=1
+fi
+if [ "$built" = "yes" ] && [ ! -f "$bin_file" ]; then
+  echo "::error::build reported SUCCESS but the binary is missing: $bin_file"
+  problems=1
+fi
+[ "$problems" -eq 0 ] || exit 1
