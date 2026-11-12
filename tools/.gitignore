@@ -1,0 +1,7 @@
+# Local broker credentials for tools/capture.sh - never commit.
+capture.env
+
+# Anything else you keep locally for capturing (key files, ad-hoc scripts with
+# credentials in them).
+*.local.env
+*.pem

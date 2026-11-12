@@ -1,0 +1,9 @@
+# Raw captures stay out of the repository: they are big, they are personal
+# (they carry your broker address and anything the bridge put on P1P2/S) and the
+# offline tests only need the scrubbed copies. Everything here is ignored except
+# this file, the README and files that went through tools/scrub_capture.sh.
+*
+!README.md
+!.gitignore
+!*_scrubbed.log
+!*_scrubbed.log.gz
