@@ -1,0 +1,4 @@
+# Host build artifacts of the replay harness (test/host/Makefile).
+# The golden files that tests compare against live in test/golden/ and ARE committed.
+build/
+__pycache__/

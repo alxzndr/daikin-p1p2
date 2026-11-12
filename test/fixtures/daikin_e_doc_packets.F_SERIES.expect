@@ -1,0 +1,9 @@
+# Hand-checked expectations for the same packets when the decoder is built for
+# F_SERIES instead of E_SERIES.
+#
+# The two 0x10 packets are Daikin E-series traffic: the F-series decode table has no
+# entry for them, so every payload byte must end up as an Unknown_ parameter instead
+# of a silently dropped byte. If these names ever change, the HA entities change with
+# them, so they are pinned here.
+P P1P2/P/P1P2MQTT/bridge0/U/0/Unknown_000010_7 20
+P P1P2/P/P1P2MQTT/bridge0/U/1/Unknown_400010_15 0

@@ -1,0 +1,53 @@
+# Hand-checked expectations for the fixture daikin_e_doc_packets.log.
+#
+# Format (checked by test/run_replay.sh, which fails if any line is wrong):
+#   <channel> <full topic> <value>
+#   count:<n> <channel> <full topic> <value>     # must appear exactly n times
+# Channel: P = parameter, D = HA discovery, R = raw packet, S = status, O = other.
+#
+# Every value below is derived by hand from the packet bytes and the tables in
+# doc/LogicalFormat/Daikin-protocol-EHYHBX08AAV3.md ("Packet type 10: request" with
+# header 000010 and "Packet type 10: response" with header 400010). Payload bytes are
+# numbered from 0 after the 3-byte header, exactly as in those tables. Nothing here is
+# copied from the harness output.
+
+# --- 000010 request: 00 01 01 00 00 00 00 14 00 00 00 00 08 00 00 0F 00 00 3D 00 ---
+# byte 0 bit 0 = 0            heat pump off
+P P1P2/P/P1P2MQTT/bridge0/S/0/Altherma_On 0
+# bytes 7-8 = 14 00           room heating setpoint, f8/8 -> 0x14 = 20.0 C
+P P1P2/P/P1P2MQTT/bridge0/S/0/Room_Heating_Setpoint 20.0
+# bytes 15-16 = 0F 00         room cooling setpoint, f8/8 -> 0x0F = 15.0 C
+P P1P2/P/P1P2MQTT/bridge0/S/0/Room_Cooling_Setpoint 15.0
+# byte 18 = 3D                DHW setpoint, f8s8 -> 61.0 C
+P P1P2/P/P1P2MQTT/bridge0/S/0/DHW_Setpoint 61.0
+# byte 9 bits 7-6 = 00        quiet level 0 ; byte 9 bit 5 = 0 -> no HC auto
+P P1P2/P/P1P2MQTT/bridge0/S/0/Quiet_Level 0
+P P1P2/P/P1P2MQTT/bridge0/S/0/Climate_HC_Auto 0
+
+# --- 400010 response: 00 00 81 01 3D 00 0F 00 14 00 1A 00 00 00 00 00 00 00 00 00 ---
+# byte 2 = 0x81 = 1000 0001: bit 0 heating on, bit 1 cooling off, bit 5 main zone off,
+# bit 7 DHW tank valve on
+P P1P2/P/P1P2MQTT/bridge0/S/1/Climate_Heating 1
+P P1P2/P/P1P2MQTT/bridge0/S/1/Climate_Cooling 0
+P P1P2/P/P1P2MQTT/bridge0/S/1/Valve_Zone_Main 0
+P P1P2/P/P1P2MQTT/bridge0/S/1/Valve_DHW_Tank 1
+# bytes 12, 13, 14 = 00 00 00  no error code
+P P1P2/P/P1P2MQTT/bridge0/M/1/ErrorCode1 0x00
+P P1P2/P/P1P2MQTT/bridge0/M/1/ErrorCode2 0x00
+P P1P2/P/P1P2MQTT/bridge0/M/1/ErrorSubCode 0x00
+# byte 18 bit 0 = 0            compressor off
+P P1P2/P/P1P2MQTT/bridge0/S/1/Compressor 0
+
+# --- the last packet differs from the first only in byte 7 (14 -> 15 = 21.0 C) ---
+# publish-on-change: the new setpoint is published once, and the keys that did not
+# change are published once in total (not once per packet).
+count:1 P P1P2/P/P1P2MQTT/bridge0/S/0/Room_Heating_Setpoint 21.0
+count:1 P P1P2/P/P1P2MQTT/bridge0/S/0/DHW_Setpoint 61.0
+count:1 P P1P2/P/P1P2MQTT/bridge0/S/0/Room_Cooling_Setpoint 15.0
+
+# --- discovery: HA discovery for that setpoint, with the contract the automations in
+#     the house rely on: entity name, unique_id and state topic must not change.
+#     (docs/ai/HOUSE_CONTEXT.md; a renamed unique_id would silently orphan the entity.)
+contains: D homeassistant/sensor/bridge0/P1P2MQTT_bridge0_S0_Room_Heating_Setpoint_0/config "uniq_id":"P1P2MQTT_bridge0_S0_Room_Heating_Setpoint_0"
+contains: D homeassistant/sensor/bridge0/P1P2MQTT_bridge0_S0_Room_Heating_Setpoint_0/config "stat_t":"P1P2/P/P1P2MQTT/bridge0/S/0/Room_Heating_Setpoint"
+contains: D homeassistant/sensor/bridge0/P1P2MQTT_bridge0_S0_Room_Heating_Setpoint_0/config "unit_of_meas":"°C"
