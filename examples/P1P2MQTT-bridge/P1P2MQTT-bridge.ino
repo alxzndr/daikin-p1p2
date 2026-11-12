@@ -207,7 +207,7 @@ bool factoryReset = 0;
 
 #define PARAM_MAX_LEN 81      // max of *_LEN below
 #define PARAM_MAX_LEN_TXT "81"
-#define PARAM_NR (sizeof(paramName) / 4)  // nr of configurable items below
+#define PARAM_NR (sizeof(paramName) / sizeof(paramName[0]))  // nr of configurable items below (was / 4: same on ESP8266, correct on a 64-bit host build)
 #define PARAM_JMASK 19       // param nr of outputMode
 #define PARAM_DEVICE_NAME 13 // param nr of deviceName
 #define PARAM_BRIDGE_NAME 14 // param nr of bridgeName

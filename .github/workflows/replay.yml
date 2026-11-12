@@ -1,0 +1,96 @@
+# Replay the decoder offline on every PR: build the ESP firmware sources with the host
+# compiler and feed them captured bus packets. No hardware, no broker, no secrets.
+#
+# Part of the P1P2MQTT fork (https://github.com/alxzndr/daikin-p1p2).
+# License: CC BY-NC-ND 4.0 with the exceptions in LICENSE.md.
+#
+# What this protects: the parameter decode tables in P1P2_ParameterConversion.h. A
+# changed byte offset shows up here as a changed value on a key that Home Assistant
+# automations use, before anyone flashes a bridge.
+name: Offline replay
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: replay-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  SERIES: E_SERIES
+
+jobs:
+  replay:
+    name: Host decoder replay / fixtures
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Build the host harness (E-series)
+        run: make -C test/host SERIES=$SERIES
+
+      - name: Hand-checked expectations and golden file
+        run: test/run_replay.sh test/fixtures/daikin_e_doc_packets.log
+
+      - name: Deterministic? (same input twice must be byte identical)
+        run: |
+          test/host/build/$SERIES/replay test/fixtures/daikin_e_doc_packets.log > /tmp/a.txt 2>/dev/null
+          test/host/build/$SERIES/replay test/fixtures/daikin_e_doc_packets.log > /tmp/b.txt 2>/dev/null
+          cmp /tmp/a.txt /tmp/b.txt
+          echo "identical output on repeat runs"
+
+      - name: Second decoder checkout gives the same answer
+        run: |
+          # Copy the firmware to an independent directory and replay through that copy,
+          # exactly how a comparison against another release candidate is run:
+          #   make -C test/host FIRMWARE_DIR=/tmp/rc23/examples/P1P2MQTT-bridge \
+          #        BUILD_DIR=/tmp/rc23-host
+          #   test/run_replay.sh <capture> --replay-bin /tmp/rc23-host/replay --update-golden
+          rm -rf "$RUNNER_TEMP/fw-copy"
+          mkdir -p "$RUNNER_TEMP/fw-copy"
+          cp -R examples/P1P2MQTT-bridge/. "$RUNNER_TEMP/fw-copy/"   # incl. its subfolders
+          make -C test/host SERIES=$SERIES FIRMWARE_DIR="$RUNNER_TEMP/fw-copy" BUILD_DIR="$GITHUB_WORKSPACE/test/host/build/second"
+          test/run_replay.sh test/fixtures/daikin_e_doc_packets.log \
+            --replay-bin test/host/build/second/replay
+
+      - name: Same packets through the F-series decode table
+        run: test/run_replay.sh test/fixtures/daikin_e_doc_packets.log --series F_SERIES
+
+      - name: Replay against hand-transcribed P lines (no recording involved)
+        run: |
+          # The second fixture holds the same R packets plus P1P2/P lines written by hand
+          # from the protocol tables - the only P lines in this repository, since captures
+          # stay out of git. Its reference is the golden file of the first fixture: same
+          # packets, so the decoder must produce the same messages.
+          test/run_replay.sh test/fixtures/daikin_e_doc_packets_p_lines_handtranscribed.log \
+            --golden test/golden/daikin_e_doc_packets.E_SERIES.golden.txt
+          test/run_replay.sh test/fixtures/daikin_e_doc_packets_p_lines_handtranscribed.log \
+            --against-capture
+
+      - name: Summary
+        if: always()
+        run: |
+          {
+            echo "## Offline replay"
+            echo
+            echo "| check | what a failure means |"
+            echo "|---|---|"
+            echo "| hand-checked expectations | a decoded value or an HA entity changed; each line names the packet bytes and the protocol table it came from |"
+            echo "| golden file | the full message sequence this decoder produces changed (values, order, topics, discovery payloads) |"
+            echo "| determinism | the harness is no longer reproducible, so the golden test cannot be trusted |"
+            echo "| second checkout | the harness depends on where it was built from |"
+            echo "| F-series | the decode tables for other brands changed |"
+            echo
+            echo "Replaying a field capture is a local-only step: \`captures/*.log\` is gitignored."
+            echo "Locally: \`test/run_replay.sh captures/<file>.log --against-capture\`."
+          } >> "$GITHUB_STEP_SUMMARY"

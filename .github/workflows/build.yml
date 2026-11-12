@@ -123,7 +123,7 @@ jobs:
             ".pio/build/Daikin-E/firmware.hex"
 
   shellcheck:
-    name: shellcheck tools/
+    name: shellcheck shell scripts
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -136,7 +136,7 @@ jobs:
           # does not silently pass on an image change.
           command -v shellcheck >/dev/null || { sudo apt-get update && sudo apt-get install -y shellcheck; }
           shellcheck --version
-          files=$(find tools .github/scripts -name '*.sh' -print)
+          files=$(find tools .github/scripts test -name '*.sh' -print)
           test -n "$files"
           # shellcheck disable=SC2086
           shellcheck -S warning $files
