@@ -6,10 +6,16 @@
 # For every input file it writes <name>_scrubbed.log containing only:
 #   * the header comments, with the broker address replaced by <redacted>;
 #   * P1P2/R lines (raw packets: the input for the offline decode tests);
-#   * P1P2/P lines (the parameter values the bridge published).
+#   * P1P2/P lines (the parameter values the bridge published);
+#   * Home Assistant discovery config lines of this bridge only
+#     (<prefix>/<component>/<node_id>/<object_id>/config, defaults homeassistant and
+#     bridge0, overridable with P1P2_MQTT_HA_DISCOVERY_PREFIX / P1P2_MQTT_HA_NODE_ID).
+#     Those payloads carry device identifiers and entity names: read them before you
+#     commit them.
 # Everything else is dropped and reported:
 #   * P1P2/S lines - verbose bridge status, the place where config values such as
 #     the OTA or WiFi password can appear;
+#   * discovery payloads of other devices, or with an unexpected topic shape;
 #   * lines on any other topic (defensive, the capture should not contain them);
 #   * lines matching a credential-like pattern (listed below).
 #
@@ -30,9 +36,15 @@ usage: $PROGRAM [-f] [-o DIR] FILE [FILE...]
   -f       overwrite an existing *_scrubbed.log
   -h       this help
 
+Which Home Assistant discovery lines belong to this bridge (same names as in
+tools/capture.env):
+  P1P2_MQTT_HA_DISCOVERY_PREFIX  default homeassistant
+  P1P2_MQTT_HA_NODE_ID           default bridge0
+
 Reads the input, writes only *_scrubbed.log. Never contacts the broker or the bus.
 It prints every line it drops, so you can check that nothing important is lost -
-and read the result again before you commit.
+and read the result again before you commit. Discovery payloads that were kept
+carry device identifiers: those lines are yours to review, not the script's.
 EOF
 }
 
@@ -54,6 +66,17 @@ shift $((OPTIND - 1))
 if [ -n "$out_dir" ]; then
   mkdir -p "$out_dir"
 fi
+
+# The bridge's own discovery topics (see tools/capture.sh). Anything discovery-like
+# that does not match this is treated as another device's payload and dropped.
+ha_prefix=${P1P2_MQTT_HA_DISCOVERY_PREFIX:-homeassistant}
+ha_node=${P1P2_MQTT_HA_NODE_ID:-bridge0}
+case "$ha_prefix" in
+  *[!A-Za-z0-9_-]*) echo "$PROGRAM: P1P2_MQTT_HA_DISCOVERY_PREFIX may only contain letters, digits, dash and underscore" >&2; exit 2 ;;
+esac
+case "$ha_node" in
+  *[!A-Za-z0-9_-]*) echo "$PROGRAM: P1P2_MQTT_HA_NODE_ID may only contain letters, digits, dash and underscore" >&2; exit 2 ;;
+esac
 
 # Lowercase literal substrings; a line containing one is dropped instead of
 # guessed at. Chosen so that no real P1P2 parameter key matches (checked against
@@ -100,10 +123,12 @@ for in_file in "$@"; do
   awk \
     -v patterns="$pattern_str" \
     -v name="$base" \
+    -v ha_prefix="$ha_prefix" \
+    -v ha_node="$ha_node" \
     -v report="$report_file" '
     BEGIN {
       n = split(patterns, pat, "\t")
-      kept = 0; drop_status = 0; drop_topic = 0; drop_secret = 0
+      kept = 0; kept_discovery = 0; drop_status = 0; drop_topic = 0; drop_secret = 0
     }
     /^#/ {
       if ($0 ~ /^# broker:/) { print "# broker: <redacted>" } else { print }
@@ -116,7 +141,17 @@ for in_file in "$@"; do
         printf "%s:%d  drop P1P2/S line (topic %s)\n", name, NR, topic >> report
         next
       }
-      if (topic !~ /^P1P2\/(R|P)(\/|$)/) {
+      is_discovery = 0
+      if (topic ~ ("^" ha_prefix "/")) {
+        # only <prefix>/<component>/<this node>/<one object id>/config
+        if (topic ~ ("^" ha_prefix "/[a-z_]+/" ha_node "/[^/]+/config$")) {
+          is_discovery = 1
+        } else {
+          drop_topic++
+          printf "%s:%d  drop discovery of another device or wrong shape: %s\n", name, NR, topic >> report
+          next
+        }
+      } else if (topic !~ /^P1P2\/(R|P)(\/|$)/) {
         drop_topic++
         printf "%s:%d  drop unexpected topic: %s\n", name, NR, topic >> report
         next
@@ -132,11 +167,12 @@ for in_file in "$@"; do
         }
       }
       kept++
+      if (is_discovery) kept_discovery++
       print
     }
     END {
-      printf "kept %d, dropped: P1P2/S %d, other topic %d, credential pattern %d\n", \
-        kept, drop_status, drop_topic, drop_secret >> report
+      printf "kept %d (%d discovery), dropped: P1P2/S %d, other topic %d, credential pattern %d\n", \
+        kept, kept_discovery, drop_status, drop_topic, drop_secret >> report
     }
     ' "$in_file" >"$kept_file"
 
@@ -148,6 +184,11 @@ for in_file in "$@"; do
     sed -e 's/^/   /' <"$report_file"
   else
     echo "   nothing removed"
+  fi
+  if [ -s "$report_file" ] && tail -1 "$report_file" | grep -qE '\([1-9][0-9]* discovery\)'; then
+    echo "   NOTE: the kept file contains Home Assistant discovery payloads. They"
+    echo "         carry device identifiers (uniq_id, dev.ids, entity names) - read"
+    echo "         those lines yourself before committing this file."
   fi
   rm -f "$report_file"
 
