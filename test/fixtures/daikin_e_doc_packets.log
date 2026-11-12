@@ -1,22 +1,23 @@
 # capture fixture for the offline replay harness (test/run_replay.sh)
 #
-# Not a recording: every raw packet below is copied verbatim from upstream
-# documentation or from the scrubbed field capture, and is written in the four-field
-# line format that tools/capture.sh produces (see captures/README.md):
+# No recordings: every packet below is copied verbatim from upstream documentation,
+# written in the four-field line format that tools/capture.sh produces (see
+# captures/README.md):
 #   <YYYY-MM-DDTHH:MM:SS> <retained 0|1> <topic> <payload>
 #
 # Sources
-#   doc/P1P2Monitor-commands.md                              "Serial output" example
-#   doc/LogicalFormat/Daikin-protocol-EHYHBX08AAV3.md        packet type 0x10 tables
-#   captures/2026-11-14_203112_night_idle_scrubbed.log       pseudo packets (verbatim)
+#   doc/P1P2Monitor-commands.md                          "Serial output from P1P2Monitor"
+#   doc/LogicalFormat/Daikin-protocol-EHYHBX08AAV3.md    packet type 0x10 tables
+# plus one packet assembled by hand (packet 4, see its comment).
 #
-# The R payloads are written the way the bridge publishes them: "R", the 20
-# characters the ESP inserts from its own clock, then the rest of the ATmega line:
-# " T  0.105: <hex>" for a bus packet, " P         <hex>" for a pseudo packet.
+# The R payloads are written the way this bridge republishes a bus packet on P1P2/R:
+# "R", the 20 characters the ESP inserts from its own clock, then the rest of the
+# ATmega line: " T  0.105: <hex>" for a bus packet, " P         <hex>" for a pseudo
+# packet.
 #
 # Byte numbers below are payload bytes as numbered in the EHYHBX08AAV3 protocol doc,
 # counting from 0 at the first byte after the 3-byte header (src, dst, type).
-# Hand-checked expectations: daikin_e_doc_packets.expect.
+# Hand-checked expectations: daikin_e_doc_packets.E_SERIES.expect.
 
 # 1. 000010 request, main controller -> heat pump. Payload:
 #      00 01 01 00 00 00 00 14 00 00 00 00 08 00 00 0F 00 00 3D 00   CRC 29
@@ -34,17 +35,32 @@
 #    byte 18 bit 0 = 0  compressor off
 2026-11-14T20:31:12 0 P1P2/R/P1P2MQTT/bridge0 R 2026-11-14 20:31:12 T  0.024: 400010000081013D000F0014001A000000000000000000E0
 
-# 3. pseudo packets, copied verbatim from the scrubbed field capture. The "P"
-#    marker instead of a relative timestamp is what the ATmega sends for these, so
-#    the harness must not try to read a timestamp here.
-2026-11-14T20:31:12 0 P1P2/R/P1P2MQTT/bridge0 R 2026-11-14 20:31:12 P         0B000D010000000000000000000000000000000000000031
-2026-11-14T20:31:12 0 P1P2/R/P1P2MQTT/bridge0 R 2026-11-14 20:31:12 P         00000D0D00000000000000000000000000000000000000C4
+# 3. pseudo packets - the two hex strings are copied verbatim from the example block in
+#    doc/P1P2Monitor-commands.md:
+#      P P         00000D0000000000000000000000000000000000000000C4
+#      R P         40000D0D00000001C63D0000000000000000000000000019
+#    They are written here in the R-topic form, because that is what a capture holds;
+#    the "P P" prefix of the first documented line is not one of the line kinds this
+#    bridge forwards (R/E/C/c/*), so of that line only the hex is used. The "P" marker
+#    instead of a relative timestamp is how the ATmega marks pseudo packets, so the
+#    harness must not try to read a timestamp there.
+#    What these two packets show: 00000D is a counter/settings request, and 40000D
+#    (src 0x40) is an answer to it. The E-series table has an explicit branch for that
+#    source on type 0x0D (P1P2_ParameterConversion.h, `case 0x0D` -> `case 0x40`), which
+#    decodes it into the bridge's pseudo-system keys: feeding it publishes C/9/ keys such
+#    as Heating_Cooling_Auto, Number_Of_Zones and the four Preset_* values. The numbers
+#    in the golden file are what the current code derives from the doc's example payload
+#    - that payload is illustrative bytes from P1P2Monitor's own output, so the values are
+#    pinned to detect changes, not asserted to be sensible readings.
+2026-11-14T20:31:12 0 P1P2/R/P1P2MQTT/bridge0 R 2026-11-14 20:31:12 P         00000D0000000000000000000000000000000000000000C4
+2026-11-14T20:31:12 0 P1P2/R/P1P2MQTT/bridge0 R 2026-11-14 20:31:12 P         40000D0D00000001C63D0000000000000000000000000019
 
-# 4. the same 000010 request with only byte 7 changed, 14 -> 15, so the room heating
-#    setpoint goes from 20.0 to 21.0 C. All other payload bytes are unchanged and the
-#    CRC is recomputed with the firmware's own algorithm (CRC-8, polynomial 0xD9
-#    reflected, feed 0x00, over the 23 preceding bytes). That algorithm was verified
-#    by reproducing the CRCs of the four documented packets above exactly.
-#    Expectation: exactly one parameter message again - Room_Heating_Setpoint 21.0 -
-#    because the decoder publishes on change only. Asserted in the .expect file.
+# 4. assembled by hand, not from any doc: the same 000010 request with only byte 7
+#    changed, 14 -> 15, so the room heating setpoint goes 20.0 -> 21.0 C. Every other
+#    payload byte is unchanged and the CRC is recomputed with the firmware's own
+#    algorithm (CRC-8, polynomial 0xD9 reflected, feed 0x00, over the 23 preceding
+#    bytes). That algorithm was verified by reproducing the CRCs of the three documented
+#    packets above exactly.
+#    Expectation: exactly one parameter message - Room_Heating_Setpoint 21.0 - because
+#    the decoder publishes on change only. Asserted in the .expect file.
 2026-11-14T20:31:13 0 P1P2/R/P1P2MQTT/bridge0 R 2026-11-14 20:31:13 T  0.106: 0000100001010000000015000000000800000F00003D00C6

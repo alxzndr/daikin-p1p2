@@ -10,8 +10,8 @@ Two modes:
            Differences are reported per topic with old/new payload; a pure timing
            difference is reported separately and does not fail the run.
 
-  capture  compare a replay run against the P1P2/P lines of the same capture, i.e.
-           against what the bridge in the house actually published. Differences that
+  capture  compare a replay run against the P1P2/P lines of the same file - in a real
+           capture those are the values the bridge published. Differences that
            are expected by construction (publish-on-change, pseudo packets, ESP
            uptime, the birth message) are grouped and explained, see --help.
 """

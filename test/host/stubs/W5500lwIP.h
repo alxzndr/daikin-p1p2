@@ -17,9 +17,9 @@ public:
   bool connected() { return linkUp; }
   void setDefault() {}
   void config(IPAddress, IPAddress, IPAddress, IPAddress) {}
-  IPAddress localIP() { return IPAddress(10, 0, 1, 99); }
+  IPAddress localIP() { return IPAddress(192, 0, 2, 99); }
   IPAddress subnetMask() { return IPAddress(255, 255, 255, 0); }
-  IPAddress gatewayIP() { return IPAddress(10, 0, 1, 1); }
+  IPAddress gatewayIP() { return IPAddress(192, 0, 2, 1); }
   void setHostname(const char *) {}
   uint8_t *macAddress() { return _mac; }
   int8_t status() { return 3; }

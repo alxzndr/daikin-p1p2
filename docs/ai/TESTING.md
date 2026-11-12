@@ -55,12 +55,15 @@ Three kinds of evidence, all machine checked:
 2. **Hand-checked expectations** (`test/fixtures/<fixture>.<SERIES>.expect`): `packet hex → key → value`
    derived from the protocol tables in `doc/LogicalFormat/`, *not* copied from the harness output. See
    `test/fixtures/daikin_e_doc_packets.E_SERIES.expect` for the format (`count:N`, `contains:`).
-3. **Live-vs-replay** (`--against-capture`): compares with what the bridge in the house published in the
-   same window. Expect differences by construction - the replay starts from an empty state and from
-   compiled EEPROM defaults, so it publishes each key once on first sight, and pseudo/uptime keys never
-   line up. The number to look at is `final value differs`: that should be 0 for the keys both sides
-   have. `test/fixtures/daikin_e_doc_packets_with_published.log` is this mode as a test: the same
-   packets plus the `P1P2/P` lines that the protocol tables say belong to them.
+3. **Against the `P1P2/P` lines of the same file** (`--against-capture`): compares the replay with the
+   parameter messages in the same input file. In a capture from the broker those are the values the
+   bridge published; nothing in this repository does that, because the house bridge does not republish
+   `P1P2/R` at all and captures stay out of git - so the only file with `P` lines here is
+   `test/fixtures/daikin_e_doc_packets_p_lines_handtranscribed.log`, whose `P` lines were transcribed by
+   hand from the protocol tables. Expect differences by construction either way: the replay starts from
+   an empty state with compiled EEPROM defaults, so it publishes each key once on first sight, and
+   pseudo/uptime keys never line up. The number to look at is `final value differs`: 0 for the keys both
+   sides have.
 
 Comparing two firmware revisions over the same packets (this is how rc23 and `main` get compared in
 roadmap task 03):

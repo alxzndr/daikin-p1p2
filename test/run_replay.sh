@@ -5,7 +5,8 @@
 #
 # Part of the P1P2MQTT fork, CC BY-NC-ND 4.0 with the exceptions in LICENSE.md.
 #
-#   test/run_replay.sh captures/2026-11-14_203112_night_idle_scrubbed.log
+#   test/run_replay.sh captures/<file>.log
+#   test/run_replay.sh test/fixtures/daikin_e_doc_packets_p_lines_handtranscribed.log --against-capture
 #   test/run_replay.sh test/fixtures/daikin_e_doc_packets.log --update-golden
 #   test/run_replay.sh <capture> --against-capture
 #   FIRMWARE_DIR=/tmp/rc23/examples/P1P2MQTT-bridge test/run_replay.sh <capture> --update-golden

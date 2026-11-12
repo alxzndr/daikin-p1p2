@@ -19,7 +19,7 @@ build/<SERIES>/replay  the build artifact (git-ignored)
 
 ```bash
 test/run_replay.sh test/fixtures/daikin_e_doc_packets.log              # expectations + golden
-test/run_replay.sh captures/<file>.log --against-capture               # vs what the bridge published
+test/run_replay.sh captures/<file>.log --against-capture               # vs the P lines in the file
 test/run_replay.sh captures/<file>.log --update-golden                 # accept a new reference
 test/run_replay.sh <capture> --series F_SERIES                         # another decode table
 make -C test/host FIRMWARE_DIR=/tmp/rc23/examples/P1P2MQTT-bridge BUILD_DIR=/tmp/rc23-host

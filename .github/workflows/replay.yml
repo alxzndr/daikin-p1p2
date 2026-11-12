@@ -66,14 +66,15 @@ jobs:
       - name: Same packets through the F-series decode table
         run: test/run_replay.sh test/fixtures/daikin_e_doc_packets.log --series F_SERIES
 
-      - name: Replay against the P lines of the same capture
+      - name: Replay against hand-transcribed P lines (no recording involved)
         run: |
-          # The second fixture holds both the R packets and the P messages that a broker
-          # capture would have recorded for them. Its reference is the golden file of the
-          # first fixture: same packets, so the decoder must produce the same messages.
-          test/run_replay.sh test/fixtures/daikin_e_doc_packets_with_published.log \
+          # The second fixture holds the same R packets plus P1P2/P lines written by hand
+          # from the protocol tables - the only P lines in this repository, since captures
+          # stay out of git. Its reference is the golden file of the first fixture: same
+          # packets, so the decoder must produce the same messages.
+          test/run_replay.sh test/fixtures/daikin_e_doc_packets_p_lines_handtranscribed.log \
             --golden test/golden/daikin_e_doc_packets.E_SERIES.golden.txt
-          test/run_replay.sh test/fixtures/daikin_e_doc_packets_with_published.log \
+          test/run_replay.sh test/fixtures/daikin_e_doc_packets_p_lines_handtranscribed.log \
             --against-capture
 
       - name: Summary

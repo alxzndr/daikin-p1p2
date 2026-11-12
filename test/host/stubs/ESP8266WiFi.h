@@ -21,10 +21,10 @@ public:
   bool isConnected() { return connected; }
   wl_status_t status() { return connected ? WL_CONNECTED : WL_DISCONNECTED; }
   int8_t RSSI() { return -50; }
-  IPAddress localIP() { return IPAddress(10, 0, 1, 99); }
+  IPAddress localIP() { return IPAddress(192, 0, 2, 99); }
   IPAddress softAPIP() { return IPAddress(192, 168, 4, 1); }
   IPAddress subnetMask() { return IPAddress(255, 255, 255, 0); }
-  IPAddress gatewayIP() { return IPAddress(10, 0, 1, 1); }
+  IPAddress gatewayIP() { return IPAddress(192, 0, 2, 1); }
   String SSID() { return String("host"); }
   String psk() { return String(""); }
   String macAddress() { return String("aa:bb:cc:dd:ee:ff"); }
