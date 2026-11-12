@@ -33,6 +33,7 @@ house (see `docs/ai/HOUSE_CONTEXT.md`), developed together with AI agents.
 | `examples/P1P2MQTT-bridge/P1P2_Config.h` | Versions, compile-time switches, defaults (write budget etc.). |
 | `OSS-dependencies/` | Pinned, partly *modified* ESP8266 core 3.0.2 + libraries. Builds depend on these exact zips. |
 | `Firmware_images/` | Upstream prebuilt binaries. `P1P2MQTT-bridge-v0.9.58rc23-Daikin-E.ino.bin` = what runs in the house today = the **rollback image**. |
+| `test/host/`, `test/run_replay.sh` | **Offline replay harness**: the ESP firmware compiled for the host against stubs, fed captured `R` lines; golden files in `test/golden/`, CI in `.github/workflows/replay.yml`. |
 | `doc/` | Upstream docs: protocol (`LogicalFormat/`, `PhysicalFormat/`), commands, HA guide, known issues, security. |
 | `docs/ai/` | **Fork docs for agents** (this fork only). |
 

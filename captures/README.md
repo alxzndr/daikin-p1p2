@@ -108,6 +108,26 @@ they happen.
   temperatures and switch-on moments: commit only the scrubbed file, and only when you
   are fine with that being on public GitHub.
 
+## Replaying a capture
+
+Nothing in this directory is executed by the tests: `captures/*.log` stays out of git, so
+CI only replays the committed fixtures in `test/fixtures/`. On your own machine:
+
+```bash
+test/run_replay.sh captures/<file>_scrubbed.log                    # golden + hand-checked values
+test/run_replay.sh captures/<file>_scrubbed.log --against-capture  # vs the bridge's own P1P2/P lines
+test/run_replay.sh captures/<file>.log                             # unscrubbed works too
+```
+
+It compiles the ESP firmware sources for your own machine (nothing is flashed, no broker
+is contacted) and feeds them the `P1P2/R` lines from the file. See `docs/ai/TESTING.md` §2 and `test/host/README.md`
+for what the result does and does not prove.
+
+If you want to commit a capture as a regression fixture, scrub it first
+(`tools/scrub_capture.sh`), put it in `test/fixtures/`, then generate the reference:
+`test/run_replay.sh test/fixtures/<name>.log --update-golden` and review the golden file
+line by line before committing it.
+
 ## Troubleshooting
 
 | Symptom | Cause / fix |
