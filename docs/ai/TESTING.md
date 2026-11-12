@@ -21,6 +21,11 @@ removed. `captures/README.md` explains the line format, the naming scheme and th
 capturing (`defrost`, `dhw_run`, `quiet_on`, `quiet_auto_stuck`, `buh_active`, `startup`, `night_idle`,
 `boost_lwt38`).
 
+`tools/capture.sh -D -d 30 contract` additionally captures the bridge's Home Assistant discovery payloads
+(`homeassistant/<component>/bridge0/<object_id>/config`, narrow enough that other devices cannot leak in).
+They are retained, so 30 seconds is enough. Task 03 diffs those payloads between two firmware versions;
+they are kept by the scrubber and carry device identifiers, so read them before committing.
+
 ## 2. Offline decode harness (to build)
 
 Goal: feed captured `R` lines into the ESP decoder on the Mac and compare the produced `P` parameters
