@@ -1,6 +1,6 @@
 # Task 02 — Offline replay harness (host-side decoder tests)
 
-**Branch:** `test/replay-harness` · **Depends on:** nothing (uses task 01's capture format; see below) ·
+**Branch:** `test/replay-harness` · **Depends on:** task 01 merged (capture format) ·
 **Write impact:** none · **Device contact:** none
 
 Start with `docs/ai/prompts/00-common.md`. Then read `docs/ai/TESTING.md`, `docs/ai/ARCHITECTURE.md`,
@@ -22,9 +22,9 @@ publish out. This is the gate for every later decoder change and for the rc23 �
      truly unavoidable (for example an `#ifndef` guard), keep it in its own commit, explain it, and
      prove the ESP build output is unchanged in size and behaviour.
    - Time is driven by the capture's timestamps, not the wall clock, so runs are deterministic.
-2. **`test/host/replay`**: reads a capture (format of `tools/capture.sh`: timestamp, topic, payload;
-   if task 01 is not merged yet, support the raw `mosquitto_sub -v` format described in
-   `docs/ai/TESTING.md` and say so), feeds the `P1P2/R` lines to the decoder, prints the produced
+2. **`test/host/replay`**: reads a capture (format of `tools/capture.sh`, described in
+   `captures/README.md`: timestamp, retained flag, topic, payload; lines with retained flag `1` are
+   the state from before the capture and are initial state, not events), feeds the `P1P2/R` lines to the decoder, prints the produced
    parameter topics/values and, separately, the HA discovery payloads.
 3. **`test/run_replay.sh <capture> [--update-golden]`**: compares the output with a golden file and
    exits non-zero on any difference, with a readable diff (key, old value, new value).

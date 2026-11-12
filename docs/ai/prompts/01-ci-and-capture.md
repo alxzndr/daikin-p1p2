@@ -42,3 +42,16 @@ has one command to record real bus traffic for the offline tests of task 02.
 - `shellcheck` passes on the scripts; you tested `capture.sh` against a local throwaway broker or a
   stubbed `mosquitto_sub` and say which.
 - The human can follow `captures/README.md` without asking questions.
+
+## Follow-up (not in the first PR) — branch `test/capture-discovery`
+
+Task 03 compares the Home Assistant discovery payloads of the firmware in the house with those of a
+newer build, so a capture must be able to include them.
+
+- Add an option to `tools/capture.sh` that also subscribes to the bridge's discovery topics
+  (`homeassistant/<component>/bridge0/…/config`; verify the exact pattern in
+  `examples/P1P2MQTT-bridge/P1P2_HomeAssistant.h` and `doc/P1P2MQTT.md`). Subscribe as narrowly as
+  possible: discovery of other devices in the house must not end up in a capture.
+- `tools/scrub_capture.sh` keeps these lines, and the human is told to read them before committing:
+  discovery payloads carry device identifiers.
+- Document the lines in `captures/README.md`. The line format does not change.
